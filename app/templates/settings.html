@@ -1,0 +1,76 @@
+{% extends "base.html" %}{% block title %}Domains{% endblock %}
+{% block content %}
+<h1>Domains</h1>
+<form method="post" id="form"><input type="hidden" name="csrf" value="{{ csrf }}">
+<div class="card">
+  <h2>Hauptdomain</h2>
+  <p class="muted">Bleibt wie sie ist. Hier trägst du nur das Ziel ein, z. B. Home Assistant.</p>
+  <label>Name (frei wählbar, wird in der Übersicht angezeigt)<input name="main_label" value="{{ s.main.label or '' }}" maxlength="60" placeholder="z. B. Home Assistant"></label>
+  <div class="two">
+    <label>Domain<input name="main_hostname" value="{{ s.main.hostname }}" placeholder="ha.beispiel.de"></label>
+    <label>Ziel (IP:Port oder URL)<input name="main_service" value="{{ s.main.service }}" placeholder="192.168.178.20:8123"></label>
+  </div>
+  <label class="check"><input type="checkbox" name="main_enabled" {{ 'checked' if s.main.enabled is not defined or s.main.enabled }}> Aktiv</label>
+  <label class="check"><input type="checkbox" name="main_notls" {{ 'checked' if s.main.no_tls_verify }}> TLS-Zertifikat des Ziels nicht prüfen</label>
+</div>
+<div class="card">
+  <h2>Subdomains</h2>
+  <div id="rows">
+  {% for h in s.hosts %}
+    <div class="hostrow">
+      <label>Name (frei wählbar, wird in der Übersicht angezeigt)<input name="hosts-{{ loop.index0 }}-label" value="{{ h.label or '' }}" maxlength="60" placeholder="z. B. Proxmox"></label>
+      <div class="two">
+        <label>Hostname<input name="hosts-{{ loop.index0 }}-hostname" value="{{ h.hostname }}" placeholder="sub.beispiel.de"></label>
+        <label>Ziel (IP:Port oder URL)<input name="hosts-{{ loop.index0 }}-service" value="{{ h.service }}" placeholder="192.168.178.30:8080"></label>
+      </div>
+      <div class="opts">
+        <label class="check"><input type="checkbox" name="hosts-{{ loop.index0 }}-enabled" {{ 'checked' if h.enabled is not defined or h.enabled }}> Aktiv</label>
+        <label class="check"><input type="checkbox" name="hosts-{{ loop.index0 }}-notls" {{ 'checked' if h.no_tls_verify is not defined or h.no_tls_verify }}> TLS-Zertifikat nicht prüfen</label>
+        <label class="check"><input type="checkbox" name="hosts-{{ loop.index0 }}-chunked" {{ 'checked' if h.disable_chunked }}> Chunked Encoding aus (für Proxmox)</label>
+        <button type="button" class="danger" onclick="this.closest('.hostrow').remove()">Entfernen</button>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+  <button type="button" id="add">+ Subdomain</button>
+</div>
+<div class="card">
+  <h2>Erweitert</h2>
+  <div class="two">
+    <label>Tunnelname<input name="tunnel_name" value="{{ s.tunnel_name }}"></label>
+    <label>Protokollstufe<select name="log_level">{% for l in log_levels %}<option {{ 'selected' if l == s.log_level }}>{{ l }}</option>{% endfor %}</select></label>
+  </div>
+  <label>Fangregel (Ziel für alle anderen Domains, leer = 404)<input name="catch_all" value="{{ s.catch_all }}"></label>
+  <label class="check"><input type="checkbox" name="post_quantum" {{ 'checked' if s.post_quantum }}> Post-Quantum-Verschlüsselung</label>
+  <label>Zusatzparameter (eine pro Zeile, z. B. <code>--protocol=http2</code>)<textarea name="run_parameters" rows="2">{{ s.run_parameters | join('\n') }}</textarea></label>
+  <label>GitHub-Repo für Updates<input name="github_repo" value="{{ s.github_repo }}"></label>
+</div>
+<div class="savebar">
+  <button name="action" value="apply" class="primary">Speichern &amp; übernehmen</button>
+  <button name="action" value="dry">Probelauf</button>
+  <button name="action" value="save">Nur speichern</button>
+</div>
+</form>
+<template id="tpl">
+  <div class="hostrow">
+    <label>Name (frei wählbar, wird in der Übersicht angezeigt)<input name="hosts-@@-label" maxlength="60" placeholder="z. B. Paperless"></label>
+    <div class="two">
+      <label>Hostname<input name="hosts-@@-hostname" placeholder="sub.beispiel.de"></label>
+      <label>Ziel (IP:Port oder URL)<input name="hosts-@@-service" placeholder="192.168.178.30:8080"></label>
+    </div>
+    <div class="opts">
+      <label class="check"><input type="checkbox" name="hosts-@@-enabled" checked> Aktiv</label>
+      <label class="check"><input type="checkbox" name="hosts-@@-notls" checked> TLS-Zertifikat nicht prüfen</label>
+      <label class="check"><input type="checkbox" name="hosts-@@-chunked"> Chunked Encoding aus (für Proxmox)</label>
+      <button type="button" class="danger" onclick="this.closest('.hostrow').remove()">Entfernen</button>
+    </div>
+  </div>
+</template>
+<script>
+var n={{ s.hosts|length + 100 }};
+document.getElementById('add').onclick=function(){
+  var html=document.getElementById('tpl').innerHTML.replace(/@@/g,n++);
+  document.getElementById('rows').insertAdjacentHTML('beforeend',html);
+};
+</script>
+{% endblock %}

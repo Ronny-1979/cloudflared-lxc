@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% block title %}Cloudflare{% endblock %}
+{% block content %}
+<h1>Cloudflare</h1>
+<div class="card">
+  <h2>Anmeldung</h2>
+  <p id="state" class="badge {{ 'ok' if has_cert else 'bad' }}">{{ 'Angemeldet' if has_cert else 'Nicht angemeldet' }}</p>
+  <div id="loginbox" hidden>
+    <p><strong>1.</strong> Öffne diese Adresse im Browser und wähle deine Domain:</p>
+    <p><a id="loginurl" href="#" target="_blank" rel="noopener">Warte auf Adresse …</a></p>
+    <p class="muted">Danach erscheint hier automatisch „Angemeldet“.</p>
+    <form method="post" action="{{ url_for('cloudflare_login_cancel') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button>Abbrechen</button></form>
+  </div>
+  <div id="startbox" class="row">
+    <button class="primary" id="startbtn">{{ 'Erneut anmelden' if has_cert else 'Bei Cloudflare anmelden' }}</button>
+    {% if has_cert %}
+    <form method="post" action="{{ url_for('cloudflare_logout') }}" onsubmit="return confirm('Lokale Anmeldung entfernen? Der Tunnel läuft weiter.')"><input type="hidden" name="csrf" value="{{ csrf }}"><button>Abmelden</button></form>
+    {% endif %}
+  </div>
+  <p class="muted">Die Anmeldung ist nur zum Anlegen des Tunnels und der DNS-Einträge nötig.</p>
+</div>
+<div class="card">
+  <h2>Tunnel</h2>
+  {% if has_tunnel %}
+  <p>Lokal vorhanden: <code>{{ tunnel_id }}</code></p>
+  <form method="post" action="{{ url_for('cloudflare_forget') }}" onsubmit="return confirm('Tunnel lokal vergessen? Beim nächsten Übernehmen wird ein neuer angelegt (neuer Name nötig, falls der alte bei Cloudflare noch existiert).')"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="danger">Lokalen Tunnel zurücksetzen</button></form>
+  {% else %}<p class="muted">Noch kein Tunnel. Er wird beim ersten „Übernehmen“ angelegt.</p>{% endif %}
+</div>
+<script>
+var poll=null;
+function show(d){
+  var box=document.getElementById('loginbox'), st=document.getElementById('state');
+  if(d.state==='waiting'){box.hidden=false;document.getElementById('startbox').hidden=true;
+    if(d.url){var a=document.getElementById('loginurl');a.href=d.url;a.textContent=d.url;}}
+  if(d.state==='done'){clearInterval(poll);location.reload();}
+  if(d.state==='error'){clearInterval(poll);box.hidden=true;document.getElementById('startbox').hidden=false;st.textContent=d.message;st.className='badge bad';}
+}
+function start(){poll=setInterval(function(){fetch('/cloudflare/login/status').then(r=>r.json()).then(show)},2000);}
+document.getElementById('startbtn').onclick=function(){
+  fetch('/cloudflare/login/start',{method:'POST',headers:{'X-CSRF':window.CSRF}}).then(r=>r.json()).then(function(d){show(d);start();});
+};
+{% if login.state == 'waiting' %}document.getElementById('loginbox').hidden=false;document.getElementById('startbox').hidden=true;start();{% endif %}
+</script>
+{% endblock %}
