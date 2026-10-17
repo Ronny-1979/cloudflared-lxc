@@ -1,0 +1,16 @@
+[Unit]
+Description=Cloudflare Tunnel (verwaltet von cloudflared-webui)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/var/lib/cloudflared-webui/tunnel.env
+
+[Service]
+Type=simple
+EnvironmentFile=/var/lib/cloudflared-webui/tunnel.env
+ExecStart=/usr/bin/cloudflared $ARGS
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

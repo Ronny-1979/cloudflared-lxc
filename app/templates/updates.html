@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block title %}Updates{% endblock %}
+{% block content %}
+<h1>Updates</h1>
+<div class="card">
+  <h2>cloudflared</h2>
+  <p id="cf-line">Installiert: <code>{{ cf_version }}</code> · Verfügbar: <span class="muted">prüfe …</span></p>
+  <p id="cf-badge" class="badge">Prüfe auf Updates …</p>
+  <p><a id="cf-link" href="https://github.com/cloudflare/cloudflared/releases" target="_blank" rel="noopener">Was ist neu? Änderungen auf GitHub ansehen →</a></p>
+  <form method="post" action="{{ url_for('update_cloudflared') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button id="cf-btn" class="primary" disabled>cloudflared aktualisieren</button></form>
+</div>
+<div class="card">
+  <h2>Weboberfläche</h2>
+  <p>Quelle: <code>github.com/{{ repo }}</code></p>
+  <p id="app-line">Installiert: <code>{{ app_version }}</code> · Neueste: <span class="muted">prüfe …</span></p>
+  <p id="app-badge" class="badge">Prüfe auf Updates …</p>
+  <p><a id="app-link" href="https://github.com/{{ repo }}/releases" target="_blank" rel="noopener">Was ist neu? Änderungen auf GitHub ansehen →</a></p>
+  <form method="post" action="{{ url_for('update_app') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button id="app-btn" class="primary" disabled>Oberfläche aktualisieren</button></form>
+  <p class="muted">Einstellungen und Tunnel bleiben beim Update erhalten.</p>
+</div>
+<script>
+function code(t){var c=document.createElement('code');c.textContent=t;return c;}
+function line(id,label1,v1,label2,v2){var e=document.getElementById(id);e.textContent='';
+ e.append(label1+': ',code(v1),' · '+label2+': ',code(v2));}
+function badge(id,cls,text){var e=document.getElementById(id);e.className='badge '+cls;e.textContent=text;}
+fetch('/api/versions?fresh=1').then(r=>r.json()).then(function(d){
+ var c=d.cloudflared;
+ line('cf-line','Installiert',c.installed,'Verfügbar',c.candidate);
+ badge('cf-badge',c.newer?'ok':'',c.newer?'Update verfügbar':'Aktuell');
+ document.getElementById('cf-btn').disabled=!c.newer;
+ var m=(c.newer?c.candidate:c.installed).match(/^\d+\.\d+\.\d+/);
+ if(m){document.getElementById('cf-link').href='https://github.com/cloudflare/cloudflared/releases/tag/'+m[0];}
+ var a=d.app;
+ if(a.ok){line('app-line','Installiert',a.version,'Neueste',a.latest);
+  badge('app-badge',a.newer?'ok':'',a.newer?'Update verfügbar':'Aktuell');
+  document.getElementById('app-btn').disabled=!a.newer;
+  if(a.latest){document.getElementById('app-link').href='https://github.com/'+d.repo+'/releases/tag/'+encodeURIComponent(a.latest);}
+ }else{badge('app-badge','bad','Prüfung fehlgeschlagen');
+  var p=document.getElementById('app-line');p.textContent=a.error||'';p.className='muted';}
+}).catch(function(){badge('cf-badge','bad','Prüfung fehlgeschlagen');badge('app-badge','bad','Prüfung fehlgeschlagen');});
+</script>
+{% endblock %}
