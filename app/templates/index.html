@@ -1,0 +1,94 @@
+{% extends "base.html" %}{% block title %}Übersicht{% endblock %}
+{% block content %}
+{% macro hostlink(name, entry) -%}
+{%- if entry.enabled is not defined or entry.enabled -%}<a class="hl" href="https://{{ name }}" target="_blank" rel="noopener">{{ name }}</a>{%- else -%}<span class="muted">{{ name }}</span>{%- endif -%}
+{%- endmacro %}
+<h1>Übersicht</h1>
+<div class="grid">
+  <div class="card">
+    <h2>Tunnel</h2>
+    <p id="status" class="badge {{ 'ok' if status.ready else 'bad' }}">
+      {% if status.ready %}verbunden ({{ status.connections }} Verbindungen){% elif status.active %}startet / nicht verbunden{% else %}gestoppt{% endif %}</p>
+    <p class="muted">Name: {{ s.tunnel_name }}{% if tunnel_id %}<br>ID: {{ tunnel_id }}{% endif %}</p>
+    <div class="row">
+      <form method="post" action="{{ url_for('tunnel_action', action='restart') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button>Neustart</button></form>
+      <form method="post" action="{{ url_for('tunnel_action', action='stop') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button>Stopp</button></form>
+      <form method="post" action="{{ url_for('tunnel_action', action='start') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button>Start</button></form>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Einrichtung</h2>
+    <ul class="checks">
+      <li class="{{ 'ok' if has_cert else 'bad' }}">Bei Cloudflare angemeldet {% if not has_cert %}– <a href="{{ url_for('cloudflare') }}">jetzt anmelden</a>{% endif %}</li>
+      <li class="{{ 'ok' if has_tunnel else 'bad' }}">Tunnel angelegt</li>
+      <li class="{{ 'ok' if hostnames else 'bad' }}">Domains eingetragen {% if not hostnames %}– <a href="{{ url_for('settings') }}">Einstellungen</a>{% endif %}</li>
+    </ul>
+    <ul class="checks" id="vers">
+      <li class="wait" id="v-cf">cloudflared {{ cloudflared }} – prüfe auf Updates …</li>
+      <li class="wait" id="v-app">Webinterface {{ app_version }} – prüfe auf Updates …</li>
+    </ul>
+  </div>
+</div>
+<div class="card">
+  <h2>Domains</h2>
+  {% if s.pending %}
+  <div class="flash ok" id="pending">
+    <strong>Gespeicherte Änderungen wirken noch nicht.</strong> Der Tunnel muss dafür neu gestartet werden.
+    <form method="post" action="{{ url_for('apply_saved') }}" style="margin-top:.5rem"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="primary">Jetzt neu starten</button></form>
+  </div>
+  {% endif %}
+  {% if hostnames %}
+  <div id="domlist">
+  {% if s.main.hostname %}
+  <div class="dom {{ '' if s.main.enabled is not defined or s.main.enabled else 'off' }}"><input type="checkbox" data-key="main" aria-label="Aktiv" {{ 'checked' if s.main.enabled is not defined or s.main.enabled }}>
+    <div class="txt"><div>{% if s.main.label %}<strong>{{ s.main.label }}</strong> <span class="tag">Haupt</span><br>{{ hostlink(s.main.hostname, s.main) }}{% else %}<strong>{{ hostlink(s.main.hostname, s.main) }}</strong> <span class="tag">Haupt</span>{% endif %}{% if s.main.enabled is defined and not s.main.enabled %} <span class="off-tag">deaktiviert</span>{% endif %}</div><div class="muted tgt">{{ s.main.service }}</div></div></div>
+  {% endif %}
+  {% for h in s.hosts %}
+  <div class="dom {{ '' if h.enabled is not defined or h.enabled else 'off' }}"><input type="checkbox" data-key="{{ loop.index0 }}" aria-label="Aktiv" {{ 'checked' if h.enabled is not defined or h.enabled }}>
+    <div class="txt"><div>{% if h.label %}<strong>{{ h.label }}</strong>{% if h.enabled is defined and not h.enabled %} <span class="off-tag">deaktiviert</span>{% endif %}<br>{{ hostlink(h.hostname, h) }}{% else %}<strong>{{ hostlink(h.hostname, h) }}</strong>{% if h.enabled is defined and not h.enabled %} <span class="off-tag">deaktiviert</span>{% endif %}{% endif %}</div><div class="muted tgt">{{ h.service }}</div></div></div>
+  {% endfor %}
+  </div>
+  {% else %}<p class="muted">Noch nichts eingetragen.</p>{% endif %}
+</div>
+<div class="modal" id="restartdlg"><div class="dlg"><h3>Tunnel neu starten?</h3>
+  <p class="muted" id="restartmsg"></p>
+  <div class="row stack"><form method="post" action="{{ url_for('apply_saved') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="primary" style="width:100%">Jetzt neu starten</button></form>
+  <button type="button" id="later">Später</button></div></div></div>
+<script>
+(function(){
+ var dlg=document.getElementById('restartdlg'),msg=document.getElementById('restartmsg');
+ document.getElementById('later').onclick=function(){dlg.classList.remove('show');
+  if(!document.getElementById('pending')){location.reload();}};
+ document.querySelectorAll('#domlist input[type=checkbox]').forEach(function(cb){
+  cb.addEventListener('change',function(){
+   var key=cb.dataset.key==='main'?'main':parseInt(cb.dataset.key,10),on=cb.checked;
+   fetch('/domains/toggle',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF':window.CSRF},body:JSON.stringify({key:key,enabled:on})})
+   .then(function(r){return r.json();}).then(function(d){
+     if(!d.ok){throw 0;}
+     cb.closest('.dom').classList.toggle('off',!on);
+     msg.textContent='';var b=document.createElement('strong');b.textContent=d.name;
+     msg.append('„',b,'“ wurde '+(on?'aktiviert':'deaktiviert')+' und gespeichert. Damit die Änderung wirkt, muss der Tunnel kurz neu starten (wenige Sekunden Unterbrechung für alle Domains).');
+     dlg.classList.add('show');
+   }).catch(function(){cb.checked=!on;alert('Das Umschalten hat nicht geklappt. Bitte Seite neu laden.');});
+  });
+ });
+})();
+(function(){
+ function row(id,name,ver,newer,ok){var e=document.getElementById(id);
+  if(!ok){e.className='wait';e.textContent=name+' '+ver+' – Prüfung nicht möglich';return;}
+  if(ver.indexOf('nicht')>=0){e.className='wait';e.textContent=name+' '+ver;return;}
+  if(newer){e.className='warn';e.innerHTML='';e.appendChild(document.createTextNode(name+' '+ver+' – Update verfügbar – '));
+   var a=document.createElement('a');a.href='/updates';a.textContent='jetzt aktualisieren';e.appendChild(a);}
+  else{e.className='ok';e.textContent=name+' '+ver+' – aktuell';}}
+ fetch('/api/versions').then(r=>r.json()).then(function(d){
+  row('v-cf','cloudflared',d.cloudflared.version,d.cloudflared.newer,true);
+  row('v-app','Webinterface',d.app.version,d.app.newer,d.app.ok);
+ }).catch(function(){});
+})();
+setInterval(function(){fetch('/api/status').then(r=>r.json()).then(d=>{
+ var e=document.getElementById('status');
+ e.className='badge '+(d.ready?'ok':'bad');
+ e.textContent=d.ready?('verbunden ('+d.connections+' Verbindungen)'):(d.active?'startet / nicht verbunden':'gestoppt');
+}).catch(function(){})},5000);
+</script>
+{% endblock %}

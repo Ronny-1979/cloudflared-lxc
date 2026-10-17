@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block title %}Auftrag{% endblock %}
+{% block content %}
+<h1 id="title">…</h1>
+<p id="state" class="badge">läuft</p>
+<p id="wait" class="muted" hidden></p>
+<pre id="log" class="log"></pre>
+<div class="row"><a class="btn" href="{{ url_for('index') }}">Zur Übersicht</a> <a class="btn" href="{{ url_for('settings') }}">Zu den Einstellungen</a></div>
+<script>
+var t=setInterval(load,1000);
+function load(){fetch('/api/job/{{ name }}').then(r=>r.json()).then(function(d){
+  document.getElementById('title').textContent=d.title||'Kein Auftrag';
+  var l=document.getElementById('log');l.textContent=d.lines.join('\n');l.scrollTop=l.scrollHeight;
+  var s=document.getElementById('state');
+  s.textContent={running:'läuft …',ok:'fertig',error:'Fehler',none:'—'}[d.state];
+  s.className='badge '+(d.state==='ok'?'ok':d.state==='error'?'bad':'');
+  if(d.state!=='running'){clearInterval(t);finished(d);}
+}).catch(function(){})}
+var done=false, oldBoot="{{ boot }}";
+function finished(d){
+  if(done||{{ 'false' if name == 'update' else 'true' }}||d.state!=='ok')return; done=true;
+  var w=document.getElementById('wait');w.hidden=false;
+  if((d.title||'').indexOf('Weboberfläche')>=0&&d.lines.join(' ').indexOf('bereits aktuell')<0){
+    // Oberfläche startet neu: warten, bis die neue Version antwortet, dann zur Übersicht
+    w.textContent='Die Oberfläche startet neu … du wirst gleich weitergeleitet.';
+    var tries=0,p=setInterval(function(){tries++;
+      fetch('/api/status',{cache:'no-store'}).then(function(r){return r.ok?r.json():Promise.reject();}).then(function(s){
+        if(s.boot&&s.boot!==oldBoot){clearInterval(p);w.textContent='Fertig. Weiterleitung …';setTimeout(function(){location.replace('/');},800);}
+      }).catch(function(){});
+      if(tries>90){clearInterval(p);w.textContent='Der Neustart dauert länger als erwartet. Lade die Seite bitte von Hand neu.';}
+    },1000);
+  }else{
+    w.textContent='Fertig. Weiterleitung zur Übersicht …';
+    setTimeout(function(){location.href='/';},3000);
+  }
+}
+load();
+</script>
+{% endblock %}

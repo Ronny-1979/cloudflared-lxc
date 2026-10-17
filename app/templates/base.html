@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Cloudflared{% endblock %}</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=app_version) }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png', v=app_version) }}">
+<meta name="theme-color" content="#f6821f">
+<meta name="apple-mobile-web-app-title" content="Cloudflared">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=app_version) }}">
+<script>window.CSRF = "{{ csrf }}";</script>
+</head>
+<body>
+{% if session.get('auth') %}
+<header id="hdr">
+  <a class="brand" href="{{ url_for('index') }}"><strong>☁ Cloudflared</strong></a>
+  <button type="button" id="menubtn" class="menubtn" aria-expanded="false" aria-controls="mainnav">☰ Menü</button>
+  <nav id="mainnav">
+    {% set ep = request.endpoint %}
+    <a href="{{ url_for('index') }}" {% if ep == 'index' %}class="cur" aria-current="page"{% endif %}>Übersicht</a>
+    <a href="{{ url_for('cloudflare') }}" {% if ep == 'cloudflare' %}class="cur" aria-current="page"{% endif %}>Cloudflare</a>
+    <a href="{{ url_for('settings') }}" {% if ep == 'settings' %}class="cur" aria-current="page"{% endif %}>Einstellungen</a>
+    <a href="{{ url_for('backup') }}" {% if ep == 'backup' %}class="cur" aria-current="page"{% endif %}>Sicherung</a>
+    <a href="{{ url_for('logs') }}" {% if ep == 'logs' %}class="cur" aria-current="page"{% endif %}>Protokolle</a>
+    <a href="{{ url_for('updates') }}" {% if ep == 'updates' %}class="cur" aria-current="page"{% endif %}>Updates</a>
+    <a href="{{ url_for('account') }}" {% if ep == 'account' %}class="cur" aria-current="page"{% endif %}>Passwort</a>
+  </nav>
+  <form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">Abmelden</button></form>
+</header>
+<script>
+(function(){var h=document.getElementById('hdr'),b=document.getElementById('menubtn');
+ b.addEventListener('click',function(){var o=h.classList.toggle('open');b.setAttribute('aria-expanded',o);b.textContent=o?'✕ Schließen':'☰ Menü';});})();
+</script>
+{% endif %}
+<main>
+{% for cat, msg in get_flashed_messages(with_categories=true) %}
+  <div class="flash {{ cat }}">{{ msg }}</div>
+{% endfor %}
+{% block content %}{% endblock %}
+</main>
+<footer>© <a href="https://github.com/Ronny-1979/cloudflared-lxc" target="_blank" rel="noopener">Ronny-1979</a> · Version {{ app_version }}</footer>
+</body>
+</html>

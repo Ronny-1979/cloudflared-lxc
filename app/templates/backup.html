@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block title %}Sicherung{% endblock %}
+{% block content %}
+<h1>Sicherung</h1>
+<div class="card">
+  <h2>Einstellungen sichern und wiederherstellen</h2>
+  <p class="muted">Exportiert alle Einstellungen (Domains, Namen, Ziele, erweiterte Optionen) in eine Datei, z. B. als Sicherung oder für einen neuen Container.
+  Passwort und Cloudflare-Zugangsdaten sind <strong>nicht</strong> enthalten.</p>
+  <div class="row stack">
+    <a class="btn" href="{{ url_for('settings_export') }}">Einstellungen exportieren</a>
+  </div>
+  <form method="post" action="{{ url_for('settings_import') }}" enctype="multipart/form-data" onsubmit="return confirm('Die aktuellen Einstellungen werden durch die Datei ersetzt. Fortfahren?')">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Sicherungsdatei importieren (.json)<input type="file" name="file" accept="application/json,.json" required></label>
+    <button>Importieren</button>
+    <p class="muted">Der Import speichert nur. Übernommen wird erst mit „Speichern &amp; übernehmen“.</p>
+  </form>
+</div>
+{% endblock %}
