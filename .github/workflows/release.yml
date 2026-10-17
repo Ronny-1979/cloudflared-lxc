@@ -1,0 +1,19 @@
+name: Release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release anlegen, falls Version neu
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="v$(tr -d '[:space:]' < app/VERSION)"
+          if gh release view "$v" >/dev/null 2>&1; then echo "$v existiert schon"; exit 0; fi
+          gh release create "$v" --target "$GITHUB_SHA" --title "$v" --generate-notes
