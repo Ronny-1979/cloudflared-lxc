@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block title %}Passwort{% endblock %}
+{% block content %}
+<div class="card narrow"><h1>Passwort ändern</h1>
+<form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>Aktuelles Passwort<input type="password" name="old" required></label>
+<label>Neues Passwort<input type="password" name="password" required minlength="8"></label>
+<label>Neues Passwort wiederholen<input type="password" name="password2" required minlength="8"></label>
+<button class="primary">Ändern</button></form></div>
+{% endblock %}
