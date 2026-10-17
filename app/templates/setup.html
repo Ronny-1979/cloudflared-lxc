@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block title %}Erste Einrichtung{% endblock %}
+{% block content %}
+<div class="card narrow"><h1>Erste Einrichtung</h1>
+<p>Lege ein Passwort für die Weboberfläche fest (mindestens 8 Zeichen).</p>
+<form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>Passwort<input type="password" name="password" required minlength="8" autofocus></label>
+<label>Passwort wiederholen<input type="password" name="password2" required minlength="8"></label>
+<button class="primary">Speichern</button></form></div>
+{% endblock %}
