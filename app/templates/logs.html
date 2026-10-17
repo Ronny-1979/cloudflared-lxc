@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block title %}Protokolle{% endblock %}
+{% block content %}
+<h1>Protokolle</h1>
+<div class="card">
+  <div class="loghead">
+    <h2>Tunnel</h2>
+    <form method="get" class="logsel">
+      <label for="n">Zeilen</label>
+      <select id="n" name="n" onchange="this.form.submit()">
+        {% for v in allowed %}<option value="{{ v }}" {% if v == n %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+      <noscript><button>Anzeigen</button></noscript>
+    </form>
+  </div>
+  <pre class="log">{{ tunnel }}</pre>
+</div>
+{% endblock %}
